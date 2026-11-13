@@ -8,13 +8,12 @@
     <name>MyActionsMenu</name>
 
     <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
-    <vendor url="https://www.mycompany.com">MyCompany</vendor>
+    <vendor url="https://github.com/DaPa/MyActionsMenu">DaPa1</vendor>
 
     <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/best-practices-for-listing.html#plugin-description -->
     <description><![CDATA[
-        Enter short description for your plugin here.<br>
-        <em>most HTML tags may be used</em>
+        myActions Menu plugin that groups frequently used toolbar actions into a customizable, searchable dropdown menu.
         ]]></description>
 
     <!-- Product and plugin compatibility requirements.
@@ -26,11 +25,27 @@
     <!-- Extensions defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
-        <!-- If the plugin is published on JetBrains Marketplace, errors reported by users are available on the plugin page.
-             See https://plugins.jetbrains.com/docs/marketplace/error-handler.html#developers-side for details. -->
-        <errorHandler implementation="com.intellij.diagnostic.JetBrainsMarketplaceErrorReportSubmitter"/>
-        <toolWindow id="MyToolWindow" factoryClass="com.dapa1.MyToolWindowFactory"
-                    icon="AllIcons.Toolwindows.ToolWindowPalette"/>
+        <applicationService serviceImplementation="com.dapa1.settings.MyActionsService"/>
     </extensions>
+
+    <actions>
+        <!--suppress PluginXmlCapitalization, PluginXmlI18n -->
+        <action id="com.dapa1.MyActionsToolbarWidget"
+                class="com.dapa1.ui.MyActionsToolbarWidget"
+                text="myActions"
+                description="Search and run custom quick actions">
+            <add-to-group group-id="MainToolbarRight" anchor="first"/>
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="alt A"/>
+        </action>
+
+        <!--suppress PluginXmlCapitalization, PluginXmlI18n -->
+        <action id="com.dapa1.actions.CustomizeMyActionsAction"
+                class="com.dapa1.actions.CustomizeMyActionsAction"
+                text="Customize myActions Menu..."
+                description="Configure actions and separators for the myActions menu">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
+    </actions>
 
 </idea-plugin>
