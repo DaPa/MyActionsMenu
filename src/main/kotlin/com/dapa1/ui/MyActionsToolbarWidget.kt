@@ -10,10 +10,15 @@ import com.intellij.openapi.actionSystem.Presentation
 import com.intellij.openapi.actionSystem.ex.CustomComponentAction
 import com.intellij.openapi.actionSystem.impl.ActionButtonWithText
 import com.intellij.openapi.project.DumbAwareAction
+import com.intellij.openapi.wm.WindowManager
+import java.awt.Container
+import java.awt.KeyboardFocusManager
+import java.awt.event.MouseEvent
 import java.util.Collections
 import java.util.WeakHashMap
 import javax.swing.JComponent
 import javax.swing.JMenuItem
+import javax.swing.SwingUtilities
 
 class MyActionsToolbarWidget : DumbAwareAction(), CustomComponentAction {
 
@@ -39,9 +44,12 @@ class MyActionsToolbarWidget : DumbAwareAction(), CustomComponentAction {
 
     override fun actionPerformed(e: AnActionEvent) {
         val inputComponent = e.inputEvent?.component as? JComponent
+        val window = inputComponent?.let { SwingUtilities.getWindowAncestor(it) }
+            ?: e.project?.let { WindowManager.getInstance().getFrame(it) }
+            ?: KeyboardFocusManager.getCurrentKeyboardFocusManager().activeWindow
         val targetComponent = when {
-            inputComponent != null && inputComponent.isShowing && inputComponent !is JMenuItem -> inputComponent
-            else -> findVisibleToolbarWidget()
+            e.inputEvent is MouseEvent && inputComponent != null && inputComponent.isShowing && inputComponent !is JMenuItem -> inputComponent
+            else -> findVisibleToolbarWidget(window)
         }
 
         val popup = MyActionsPopup(e.project, e.dataContext)
@@ -59,8 +67,13 @@ class MyActionsToolbarWidget : DumbAwareAction(), CustomComponentAction {
 
 private val activeWidgets: MutableSet<JComponent> = Collections.newSetFromMap(WeakHashMap())
 
-fun findVisibleToolbarWidget(): JComponent? {
+fun findVisibleToolbarWidget(window: Container? = null): JComponent? {
     synchronized(activeWidgets) {
-        return activeWidgets.firstOrNull { it.isShowing }
+        return findVisibleToolbarWidget(activeWidgets, window)
     }
+}
+
+internal fun findVisibleToolbarWidget(widgets: Collection<JComponent>, window: Container?): JComponent? {
+    if (window == null) return null
+    return widgets.firstOrNull { it.isShowing && SwingUtilities.isDescendingFrom(it, window) }
 }

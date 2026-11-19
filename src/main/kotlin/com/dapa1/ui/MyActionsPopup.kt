@@ -35,6 +35,7 @@ import java.awt.Component
 import java.awt.Container
 import java.awt.Cursor
 import java.awt.Dimension
+import java.awt.KeyboardFocusManager
 import java.awt.Point
 import java.awt.Rectangle
 import java.awt.Window
@@ -194,7 +195,7 @@ class MyActionsPopup(
 
         val ideWindow: Window? = (targetComponent?.let { SwingUtilities.getWindowAncestor(it) })
             ?: (project?.let { WindowManager.getInstance().getFrame(it) })
-            ?: WindowManager.getInstance().findVisibleFrame()
+            ?: KeyboardFocusManager.getCurrentKeyboardFocusManager().activeWindow
 
         val screenRect: Rectangle = if (targetComponent != null && targetComponent.isShowing) {
             ScreenUtil.getScreenRectangle(targetComponent)
