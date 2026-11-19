@@ -6,6 +6,7 @@
 
 ### Added
 - Initial version.
+- Optional export of menu actions' keyboard shortcuts; importing shortcuts is not yet supported.
 
 ### Changed
 - Initial version.

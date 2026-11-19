@@ -1,10 +1,49 @@
 package com.dapa1.util
 
 import com.dapa1.model.ActionItemConfig
+import com.google.gson.JsonParser
 import org.junit.Assert.*
 import org.junit.Test
 
 class MenuImportExportHelperTest {
+
+    @Test
+    fun testShortcutExportIsOptInAndRoundTrips() {
+        val items = listOf(
+            ActionItemConfig(actionId = "SaveAll"),
+            ActionItemConfig(actionId = "Run"),
+            ActionItemConfig(actionId = "SaveAll", isSeparator = true),
+            ActionItemConfig(actionId = "Other")
+        )
+        val shortcuts = mapOf(
+            "SaveAll" to listOf(KeyboardShortcutExportModel("ctrl pressed S"), KeyboardShortcutExportModel("alt pressed S")),
+            "Run" to listOf(KeyboardShortcutExportModel("ctrl pressed K", "ctrl pressed R"))
+        )
+
+        val defaultJson = MenuImportExportHelper.exportToJson("Menu", items = items)
+        assertFalse(defaultJson.contains("shortcut"))
+        assertTrue(MenuImportExportHelper.importFromJson(defaultJson).items.all { it.shortcuts == null })
+
+        val json = MenuImportExportHelper.exportToJson("Menu", items = items, shortcuts = shortcuts)
+        val jsonItems = JsonParser.parseString(json).asJsonObject.getAsJsonArray("items")
+        assertFalse(jsonItems[0].asJsonObject.getAsJsonArray("shortcuts")[0].asJsonObject.has("secondKeyStroke"))
+        assertFalse(jsonItems[2].asJsonObject.has("shortcuts"))
+        assertFalse(jsonItems[3].asJsonObject.has("shortcuts"))
+        val imported = MenuImportExportHelper.importFromJson(json)
+        assertEquals(shortcuts["SaveAll"], imported.items[0].shortcuts)
+        assertEquals(shortcuts["Run"], imported.items[1].shortcuts)
+        assertNull(imported.items[2].shortcuts)
+        assertNull(imported.items[3].shortcuts)
+    }
+
+    @Test
+    fun testImportShortcutsInLegacyArrayAndObject() {
+        val item = """{"actionId":"Run","shortcuts":[{"firstKeyStroke":"ctrl pressed K","secondKeyStroke":"ctrl pressed R"}]}"""
+        val expected = listOf(KeyboardShortcutExportModel("ctrl pressed K", "ctrl pressed R"))
+        assertEquals(expected, MenuImportExportHelper.importFromJson("[$item]").items.single().shortcuts)
+        assertEquals(expected, MenuImportExportHelper.importFromJson("""{"items":[$item]}""").items.single().shortcuts)
+        assertNull(MenuImportExportHelper.importFromJson("""[{"actionId":"Run"}]""").items.single().shortcuts)
+    }
 
     @Test
     fun testExportAndImportCycle() {

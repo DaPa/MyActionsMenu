@@ -3,6 +3,7 @@ package com.dapa1.ui
 import com.dapa1.model.ActionItemConfig
 import com.dapa1.settings.MyActionsService
 import com.dapa1.util.IconHelper
+import com.dapa1.util.KeyboardShortcutExportModel
 import com.dapa1.util.MenuImportExportHelper
 import com.intellij.icons.AllIcons
 import com.intellij.ide.setToolTipText
@@ -480,12 +481,37 @@ class MyActionsCustomizationDialog(private val project: Project?) : DialogWrappe
         for (i in 0 until listModel.size()) {
             items.add(listModel.get(i))
         }
+        val options = arrayOf("Menu Only", "Include Shortcuts", "Cancel")
+        val choice = Messages.showDialog(
+            project,
+            "Include keyboard shortcuts from the active keymap? Shortcut restoration is not yet supported; imports will not change the keymap.",
+            "Export Configuration",
+            options,
+            0,
+            Messages.getQuestionIcon()
+        )
+        if (choice != 0 && choice != 1) return
+        val shortcuts = if (choice == 1) {
+            val keymap = KeymapManager.getInstance()?.activeKeymap
+            if (keymap == null) {
+                Messages.showErrorDialog(project, "The active keymap is unavailable.", "Export Error")
+                return
+            }
+            items.filterNot { it.isSeparator }.map { it.actionId }.distinct().associateWith { actionId ->
+                keymap.getShortcuts(actionId).filterIsInstance<KeyboardShortcut>().map {
+                    KeyboardShortcutExportModel(it.firstKeyStroke.toString(), it.secondKeyStroke?.toString())
+                }
+            }
+        } else emptyMap()
         val title = titleField.text.trim().ifEmpty { "myActions" }
-        MenuImportExportHelper.exportToFile(project, title, currentMenuIconPath, items)
+        MenuImportExportHelper.exportToFile(project, title, currentMenuIconPath, items, shortcuts)
     }
 
     private fun importConfiguration() {
         val imported = MenuImportExportHelper.importFromFile(project) ?: return
+        if (imported.items.any { it.shortcuts != null }) {
+            Messages.showInfoMessage(project, "This file contains keyboard shortcuts, but shortcut restoration is not yet supported. The active keymap will not be changed.", "Shortcuts Not Imported")
+        }
         if (listModel.isEmpty) {
             titleField.text = imported.menuTitle
             currentMenuIconPath = imported.menuIconPath

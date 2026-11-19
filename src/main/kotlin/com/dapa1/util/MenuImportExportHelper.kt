@@ -15,11 +15,17 @@ import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileWrapper
 
+data class KeyboardShortcutExportModel(
+    var firstKeyStroke: String,
+    var secondKeyStroke: String? = null
+)
+
 data class MenuItemExportModel(
     var actionId: String? = null,
     var isSeparator: Boolean = false,
     var customText: String? = null,
-    var customIconPath: String? = null
+    var customIconPath: String? = null,
+    var shortcuts: List<KeyboardShortcutExportModel>? = null
 ) {
     fun toActionItemConfig(): ActionItemConfig {
         return ActionItemConfig(
@@ -56,12 +62,21 @@ data class MenuExportModel(
 object MenuImportExportHelper {
     private val gson: Gson = GsonBuilder().setPrettyPrinting().create()
 
-    fun exportToJson(menuTitle: String, menuIconPath: String? = null, items: List<ActionItemConfig>): String {
+    fun exportToJson(
+        menuTitle: String,
+        menuIconPath: String? = null,
+        items: List<ActionItemConfig>,
+        shortcuts: Map<String, List<KeyboardShortcutExportModel>> = emptyMap()
+    ): String {
         val exportModel = MenuExportModel(
             version = 1,
             menuTitle = menuTitle,
             menuIconPath = menuIconPath?.ifBlank { null },
-            items = items.map { MenuItemExportModel.fromActionItemConfig(it) }
+            items = items.map { item ->
+                MenuItemExportModel.fromActionItemConfig(item).apply {
+                    if (!item.isSeparator) this.shortcuts = shortcuts[item.actionId]
+                }
+            }
         )
         return gson.toJson(exportModel)
     }
@@ -115,14 +130,14 @@ object MenuImportExportHelper {
         }
     }
 
-    fun exportToFile(project: Project?, menuTitle: String, menuIconPath: String?, items: List<ActionItemConfig>): Boolean {
+    fun exportToFile(project: Project?, menuTitle: String, menuIconPath: String?, items: List<ActionItemConfig>, shortcuts: Map<String, List<KeyboardShortcutExportModel>> = emptyMap()): Boolean {
         @Suppress("DialogTitleCapitalization") val descriptor = FileSaverDescriptor("Export myActions Configuration", "Save menu configuration to a JSON file", "json")
         val saveDialog = FileChooserFactory.getInstance().createSaveFileDialog(descriptor, project)
         val fileWrapper: VirtualFileWrapper =
             saveDialog.save(null as VirtualFile?, "quick-actions-menu.json") ?: return false
 
         return try {
-            val json = exportToJson(menuTitle, menuIconPath, items)
+            val json = exportToJson(menuTitle, menuIconPath, items, shortcuts)
             val targetFile = fileWrapper.file
             targetFile.writeText(json, Charsets.UTF_8)
             Messages.showInfoMessage(
