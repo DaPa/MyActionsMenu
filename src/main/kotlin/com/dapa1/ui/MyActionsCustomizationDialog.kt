@@ -10,6 +10,7 @@ import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.CustomShortcutSet
 import com.intellij.openapi.actionSystem.KeyboardShortcut
 import com.intellij.openapi.keymap.KeymapManager
 import com.intellij.openapi.keymap.KeymapUtil
@@ -19,6 +20,7 @@ import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.util.text.HtmlChunk
 import com.intellij.ui.ColoredListCellRenderer
+import com.intellij.ui.CommonActionsPanel
 import com.intellij.ui.PopupHandler
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.ToolbarDecorator
@@ -183,7 +185,10 @@ class MyActionsCustomizationDialog(private val project: Project?) : DialogWrappe
                 showAddActionDialog()
             }
             .setAddActionName("Add Action")
-            .addExtraAction(object : DumbAwareAction("Edit Icon (F4)", "Edit action icon (F4)", AllIcons.Actions.Edit) {
+            .addExtraAction(object : DumbAwareAction("Edit Icon", "Edit action icon", AllIcons.Actions.Edit) {
+                init {
+                    shortcutSet = CustomShortcutSet(KeyStroke.getKeyStroke(KeyEvent.VK_F4, 0))
+                }
                 override fun actionPerformed(e: AnActionEvent) {
                     val index = itemList.selectedIndex
                     if (index in 0 until listModel.size()) {
@@ -203,6 +208,26 @@ class MyActionsCustomizationDialog(private val project: Project?) : DialogWrappe
                 override fun getActionUpdateThread(): ActionUpdateThread {
                     return ActionUpdateThread.EDT
                 }
+            })
+            .addExtraAction(object : DumbAwareAction("Edit Label", "Edit action label", AllIcons.Actions.Edit) {
+                init {
+                    shortcutSet = CustomShortcutSet(KeyStroke.getKeyStroke(KeyEvent.VK_F2, 0))
+                }
+
+                override fun actionPerformed(e: AnActionEvent) {
+                    val index = itemList.selectedIndex
+                    if (index in 0 until listModel.size()) {
+                        val item = listModel.get(index)
+                        if (!item.isSeparator) editLabel(item, index)
+                    }
+                }
+
+                override fun update(e: AnActionEvent) {
+                    val index = itemList.selectedIndex
+                    e.presentation.isEnabled = index in 0 until listModel.size() && !listModel.get(index).isSeparator
+                }
+
+                override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
             })
             .addExtraAction(object : DumbAwareAction("Add Separator", null, AllIcons.General.SeparatorH) {
                 override fun actionPerformed(e: AnActionEvent) {
@@ -228,29 +253,13 @@ class MyActionsCustomizationDialog(private val project: Project?) : DialogWrappe
                 }
             })
             .setRemoveAction {
-                val index = itemList.selectedIndex
-                if (index >= 0) {
-                    listModel.remove(index)
-                    if (!listModel.isEmpty) {
-                        itemList.selectedIndex = index.coerceAtMost(listModel.size() - 1)
-                    }
-                }
+                removeSelectedItem()
             }
             .setMoveUpAction {
-                val index = itemList.selectedIndex
-                if (index > 0) {
-                    val item = listModel.remove(index)
-                    listModel.add(index - 1, item)
-                    itemList.selectedIndex = index - 1
-                }
+                moveSelectedItem(-1)
             }
             .setMoveDownAction {
-                val index = itemList.selectedIndex
-                if (index in 0 until listModel.size() - 1) {
-                    val item = listModel.remove(index)
-                    listModel.add(index + 1, item)
-                    itemList.selectedIndex = index + 1
-                }
+                moveSelectedItem(1)
             }
 
         mainPanel.add(decorator.createPanel(), BorderLayout.CENTER)
@@ -262,7 +271,7 @@ class MyActionsCustomizationDialog(private val project: Project?) : DialogWrappe
         if (chooser.showAndGet()) {
             val actionId = chooser.selectedActionId ?: return
             val newItem = ActionItemConfig(actionId = actionId)
-            val targetIdx = insertIndex ?: (itemList.selectedIndex + 1).coerceAtLeast(listModel.size())
+            val targetIdx = insertIndex ?: if (itemList.selectedIndex >= 0) itemList.selectedIndex + 1 else listModel.size()
             if (targetIdx in 0..listModel.size()) {
                 listModel.add(targetIdx, newItem)
                 itemList.selectedIndex = targetIdx
@@ -275,7 +284,7 @@ class MyActionsCustomizationDialog(private val project: Project?) : DialogWrappe
 
     private fun addSeparator(insertIndex: Int? = null) {
         val separatorItem = ActionItemConfig(isSeparator = true)
-        val targetIdx = insertIndex ?: (itemList.selectedIndex + 1).coerceAtLeast(listModel.size())
+        val targetIdx = insertIndex ?: if (itemList.selectedIndex >= 0) itemList.selectedIndex + 1 else listModel.size()
         if (targetIdx in 0..listModel.size()) {
             listModel.add(targetIdx, separatorItem)
             itemList.selectedIndex = targetIdx
@@ -284,6 +293,27 @@ class MyActionsCustomizationDialog(private val project: Project?) : DialogWrappe
             itemList.selectedIndex = listModel.size() - 1
         }
     }
+
+    private fun removeSelectedItem() {
+        val index = itemList.selectedIndex
+        if (index in 0 until listModel.size()) {
+            listModel.remove(index)
+            if (!listModel.isEmpty) itemList.selectedIndex = index.coerceAtMost(listModel.size() - 1)
+        }
+    }
+
+    private fun moveSelectedItem(offset: Int) {
+        val index = itemList.selectedIndex
+        val target = index + offset
+        if (index in 0 until listModel.size() && target in 0 until listModel.size()) {
+            val item = listModel.remove(index)
+            listModel.add(target, item)
+            itemList.selectedIndex = target
+        }
+    }
+
+    private fun commonShortcut(button: CommonActionsPanel.Buttons): KeyStroke? =
+        CommonActionsPanel.getCommonShortcut(button).shortcuts.filterIsInstance<KeyboardShortcut>().firstOrNull()?.firstKeyStroke
 
     private fun editIcon(item: ActionItemConfig, index: Int) {
         val action = ActionManager.getInstance().getAction(item.actionId)
@@ -342,15 +372,16 @@ class MyActionsCustomizationDialog(private val project: Project?) : DialogWrappe
                     }
 
                     val addBelowItem = JMenuItem("Add Action Below...").apply {
+                        accelerator = commonShortcut(CommonActionsPanel.Buttons.ADD)
                         addActionListener {
-                            showAddActionDialog(index + 1)
+                            showAddActionDialog()
                         }
                     }
                     popup.add(addBelowItem)
 
                     val addSeparatorBelowItem = JMenuItem("Add Separator Below").apply {
                         addActionListener {
-                            addSeparator(index + 1)
+                            addSeparator()
                         }
                     }
                     popup.add(addSeparatorBelowItem)
@@ -358,14 +389,26 @@ class MyActionsCustomizationDialog(private val project: Project?) : DialogWrappe
                     popup.addSeparator()
 
                     val removeItem = JMenuItem("Remove").apply {
+                        accelerator = commonShortcut(CommonActionsPanel.Buttons.REMOVE)
                         addActionListener {
-                            listModel.remove(index)
-                            if (!listModel.isEmpty) {
-                                itemList.selectedIndex = index.coerceAtMost(listModel.size() - 1)
-                            }
+                            removeSelectedItem()
                         }
                     }
                     popup.add(removeItem)
+
+                    val moveUpItem = JMenuItem("Move Up").apply {
+                        accelerator = commonShortcut(CommonActionsPanel.Buttons.UP)
+                        isEnabled = index > 0
+                        addActionListener { moveSelectedItem(-1) }
+                    }
+                    popup.add(moveUpItem)
+
+                    val moveDownItem = JMenuItem("Move Down").apply {
+                        accelerator = commonShortcut(CommonActionsPanel.Buttons.DOWN)
+                        isEnabled = index < listModel.size() - 1
+                        addActionListener { moveSelectedItem(1) }
+                    }
+                    popup.add(moveDownItem)
 
                     popup.addSeparator()
 
