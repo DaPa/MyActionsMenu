@@ -44,7 +44,7 @@ class ChooseActionDialog(project: Project?) : DialogWrapper(project, true) {
     ) {
         val shortcutText: String by lazy {
             val activeKeymap = try { KeymapManager.getInstance()?.activeKeymap } catch (_: Throwable) { null }
-            val keymapShortcuts = activeKeymap?.getShortcuts(actionId)?.takeIf { it.isNotEmpty() }
+            val keymapShortcuts = activeKeymap?.getShortcuts(actionId)
             val shortcuts = keymapShortcuts ?: action.shortcutSet.shortcuts
             shortcuts.firstOrNull { it is KeyboardShortcut }?.let {
                 KeymapUtil.getShortcutText(it)

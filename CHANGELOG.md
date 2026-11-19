@@ -16,3 +16,4 @@
 ## [1.0.1] - 2026-11-19
 - Bugfix: ensure popup opens in the correct IDE when multiple instances.
 - Harmonized the customization toolbar and context menu.
+- Added Edit Keyboard Shortcut for selected actions using the IDE's Keymap settings.

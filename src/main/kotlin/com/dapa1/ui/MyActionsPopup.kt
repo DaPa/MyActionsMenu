@@ -144,7 +144,7 @@ class MyActionsPopup(
             val customIcon = IconHelper.loadCustomIcon(config.customIconPath)
             val icon = customIcon ?: defaultIcon
 
-            val keymapShortcuts = activeKeymap?.getShortcuts(config.actionId)?.takeIf { it.isNotEmpty() }
+            val keymapShortcuts = activeKeymap?.getShortcuts(config.actionId)
             val shortcuts = keymapShortcuts ?: action?.shortcutSet?.shortcuts
             val shortcutText = shortcuts?.firstOrNull { it is KeyboardShortcut }?.let {
                 KeymapUtil.getShortcutText(it)
@@ -500,7 +500,7 @@ class MyActionsPopup(
         for (item in allItems) {
             if (item.isSeparator || item.action == null) continue
 
-            val keymapShortcuts = activeKeymap?.getShortcuts(item.itemConfig.actionId)?.takeIf { it.isNotEmpty() }
+            val keymapShortcuts = activeKeymap?.getShortcuts(item.itemConfig.actionId)
             val shortcuts = keymapShortcuts ?: item.action.shortcutSet.shortcuts
             for (shortcut in shortcuts) {
                 if (shortcut is KeyboardShortcut) {

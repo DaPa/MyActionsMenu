@@ -14,6 +14,8 @@ import com.intellij.openapi.actionSystem.CustomShortcutSet
 import com.intellij.openapi.actionSystem.KeyboardShortcut
 import com.intellij.openapi.keymap.KeymapManager
 import com.intellij.openapi.keymap.KeymapUtil
+import com.intellij.openapi.keymap.impl.ui.KeymapPanel
+import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
@@ -142,7 +144,7 @@ class MyActionsCustomizationDialog(private val project: Project?) : DialogWrappe
                 }
 
                 val activeKeymap = try { KeymapManager.getInstance()?.activeKeymap } catch (_: Throwable) { null }
-                val keymapShortcuts = activeKeymap?.getShortcuts(value.actionId)?.takeIf { it.isNotEmpty() }
+                val keymapShortcuts = activeKeymap?.getShortcuts(value.actionId)
                 val shortcuts = keymapShortcuts ?: action?.shortcutSet?.shortcuts
                 val shortcutText = shortcuts?.firstOrNull { it is KeyboardShortcut }?.let {
                     KeymapUtil.getShortcutText(it)
@@ -225,6 +227,18 @@ class MyActionsCustomizationDialog(private val project: Project?) : DialogWrappe
                 override fun update(e: AnActionEvent) {
                     val index = itemList.selectedIndex
                     e.presentation.isEnabled = index in 0 until listModel.size() && !listModel.get(index).isSeparator
+                }
+
+                override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+            })
+            .addExtraAction(object : DumbAwareAction("Edit Shortcut", "Edit action shortcuts in Keymap settings", AllIcons.Actions.Edit) {
+                override fun actionPerformed(e: AnActionEvent) {
+                    val item = itemList.selectedValue ?: return
+                    if (canEditShortcut(item)) editShortcut(item)
+                }
+
+                override fun update(e: AnActionEvent) {
+                    e.presentation.isEnabled = itemList.selectedValue?.let(::canEditShortcut) == true
                 }
 
                 override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
@@ -343,6 +357,16 @@ class MyActionsCustomizationDialog(private val project: Project?) : DialogWrappe
         }
     }
 
+    private fun canEditShortcut(item: ActionItemConfig): Boolean =
+        !item.isSeparator && ActionManager.getInstance().getAction(item.actionId) != null
+
+    private fun editShortcut(item: ActionItemConfig) {
+        ShowSettingsUtil.getInstance().showSettingsDialog(project, KeymapPanel::class.java) { panel ->
+            panel.selectAction(item.actionId)
+        }
+        itemList.repaint()
+    }
+
     private fun setupContextMenu() {
         itemList.addMouseListener(object : PopupHandler() {
             override fun invokePopup(comp: Component, x: Int, y: Int) {
@@ -368,6 +392,11 @@ class MyActionsCustomizationDialog(private val project: Project?) : DialogWrappe
                             }
                         }
                         popup.add(editLabelItem)
+                        val editShortcutItem = JMenuItem("Edit Shortcut...").apply {
+                            isEnabled = canEditShortcut(item)
+                            addActionListener { editShortcut(item) }
+                        }
+                        popup.add(editShortcutItem)
                         popup.addSeparator()
                     }
 
