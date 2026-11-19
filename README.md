@@ -37,7 +37,8 @@ A powerful, customizable toolbar dropdown menu plugin for IntelliJ-based IDEs. *
 - **Manage Actions & Separators:** Add any registered IDE action, insert visual separator lines, reorder items, or remove entries.
 - **Fast Action Chooser:** Search across tens of thousands of platform actions with background indexing, debounced filtering, and zero UI freezes.
 - **Custom Display Labels:** Rename action labels (via `F2` or context menu) to create concise or context-specific descriptions in the menu.
-- **Drag & Drop / Reordering Controls:** Easily move items up and down using toolbar controls, keyboard shortcuts, or context menus.
+- **Reordering Controls:** Move items up and down using toolbar controls, keyboard shortcuts, or context menus.
+- **Edit Keyboard Shortcuts:** Open the IDE's Keymap settings for a selected action from the toolbar or context menu.
 
 ### 3. Full Icon Customization
 - **Internal & External Icons:** Customize icons for individual menu items or for the main menu button itself.
@@ -58,6 +59,9 @@ A powerful, customizable toolbar dropdown menu plugin for IntelliJ-based IDEs. *
 
 ## Getting Started & Usage
 
+### Installation
+Install [MyActionsMenu from JetBrains Marketplace](https://plugins.jetbrains.com/plugin/36112-myactionsmenu), or search for **MyActionsMenu** under `Settings | Plugins | Marketplace`.
+
 ### Opening the Menu
 - **Toolbar Button:** Click the **myActions** button on the right side of the Main Toolbar.
 - **Keyboard Shortcut:** Press `Alt+A` (or your custom shortcut configured in `Settings | Keymap`).
@@ -72,7 +76,8 @@ A powerful, customizable toolbar dropdown menu plugin for IntelliJ-based IDEs. *
 4. **Edit Icon:** Select an item and press `F4` (or click **Edit Icon**) to select an internal IDE action icon or browse for an external image file.
 5. **Rename / Custom Label:** Press `F2` (or click **Edit Label**) to override the default action text.
 6. **Customize Menu Title & Icon:** In the top header of the customization dialog, update the menu title text or click the icon button to pick a custom icon for the main toolbar button.
-7. **Export / Import:** Use the **Export...** and **Import...** buttons in the dialog footer or toolbar to save and restore `.json` configuration profiles.
+7. **Edit Shortcut:** Select an action and choose **Edit Shortcut** from the toolbar or context menu to open its IDE Keymap settings.
+8. **Export / Import:** Use the **Export...** and **Import...** toolbar buttons to save and restore `.json` configuration profiles.
 
 ---
 
