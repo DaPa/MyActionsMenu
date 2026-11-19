@@ -1,7 +1,6 @@
 package com.dapa1.ui
 
 import com.intellij.openapi.actionSystem.KeyboardShortcut
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test

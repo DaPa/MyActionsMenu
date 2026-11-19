@@ -5,6 +5,8 @@ import com.dapa1.settings.MyActionsService
 import com.dapa1.util.IconHelper
 import com.dapa1.util.KeyboardShortcutExportModel
 import com.dapa1.util.MenuImportExportHelper
+import com.dapa1.util.MenuExportModel
+import com.dapa1.util.ShortcutRestoreEngine
 import com.intellij.icons.AllIcons
 import com.intellij.ide.setToolTipText
 import com.intellij.openapi.actionSystem.ActionManager
@@ -15,6 +17,7 @@ import com.intellij.openapi.actionSystem.CustomShortcutSet
 import com.intellij.openapi.actionSystem.KeyboardShortcut
 import com.intellij.openapi.keymap.KeymapManager
 import com.intellij.openapi.keymap.KeymapUtil
+import com.intellij.openapi.keymap.ex.KeymapManagerEx
 import com.intellij.openapi.keymap.impl.ui.KeymapPanel
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.DumbAwareAction
@@ -484,7 +487,7 @@ class MyActionsCustomizationDialog(private val project: Project?) : DialogWrappe
         val options = arrayOf("Menu Only", "Include Shortcuts", "Cancel")
         val choice = Messages.showDialog(
             project,
-            "Include keyboard shortcuts from the active keymap? Shortcut restoration is not yet supported; imports will not change the keymap.",
+            "Include keyboard shortcuts from the active keymap?",
             "Export Configuration",
             options,
             0,
@@ -509,10 +512,8 @@ class MyActionsCustomizationDialog(private val project: Project?) : DialogWrappe
 
     private fun importConfiguration() {
         val imported = MenuImportExportHelper.importFromFile(project) ?: return
-        if (imported.items.any { it.shortcuts != null }) {
-            Messages.showInfoMessage(project, "This file contains keyboard shortcuts, but shortcut restoration is not yet supported. The active keymap will not be changed.", "Shortcuts Not Imported")
-        }
         if (listModel.isEmpty) {
+            importShortcuts(imported)
             titleField.text = imported.menuTitle
             currentMenuIconPath = imported.menuIconPath
             updateMenuIconButton()
@@ -535,6 +536,7 @@ class MyActionsCustomizationDialog(private val project: Project?) : DialogWrappe
             Messages.getQuestionIcon()
         )
 
+        if (result == 0 || result == 1) importShortcuts(imported)
         when (result) {
             0 -> { // Replace
                 titleField.text = imported.menuTitle
@@ -557,6 +559,41 @@ class MyActionsCustomizationDialog(private val project: Project?) : DialogWrappe
                     itemList.selectedIndex = startIndex
                 }
             }
+        }
+    }
+
+    private fun importShortcuts(imported: MenuExportModel) {
+        if (imported.items.none { !it.isSeparator && !it.shortcuts.isNullOrEmpty() }) return
+        val choice = Messages.showYesNoDialog(
+            project,
+            "This file contains keyboard shortcuts. Review them for optional import? Shortcuts affect the whole IDE, and may differ between platforms.",
+            "Import Keyboard Shortcuts",
+            Messages.getQuestionIcon()
+        )
+        if (choice != Messages.YES) return
+        val manager = KeymapManagerEx.getInstanceEx()
+        val source = manager.activeKeymap
+        val plan = ShortcutRestoreEngine.prepare(imported.items, source)
+        val dialog = ShortcutImportDialog(project, plan)
+        if (!dialog.showAndGet()) return
+        if (manager.activeKeymap !== source) {
+            Messages.showErrorDialog(project, "The active keymap changed while reviewing shortcuts. No shortcuts were imported.", "Shortcut Import")
+            return
+        }
+        try {
+            val schemes = manager.schemeManager
+            val base = "Imported shortcuts"
+            var name = base
+            var suffix = 2
+            while (schemes.findSchemeByName(name) != null) name = "$base (${suffix++})"
+            val result = ShortcutRestoreEngine.apply(plan, name, dialog.selectedEntries(), dialog.decisions())
+            if (result.applied.isNotEmpty()) {
+                schemes.addScheme(result.keymap)
+                manager.activeKeymap = result.keymap
+            }
+            Messages.showInfoMessage(project, "Imported ${result.applied.size} shortcuts; ${result.skipped.size} were skipped or already assigned.", "Shortcut Import")
+        } catch (e: Exception) {
+            Messages.showErrorDialog(project, "Failed to import shortcuts: ${e.message}", "Shortcut Import Error")
         }
     }
 

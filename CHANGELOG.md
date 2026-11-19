@@ -6,7 +6,6 @@
 
 ### Added
 - Initial version.
-- Optional export of menu actions' keyboard shortcuts; importing shortcuts is not yet supported.
 
 ### Changed
 - Initial version.
@@ -16,5 +15,6 @@
 
 ## [1.0.1] - 2026-11-19
 - Bugfix: ensure popup opens in the correct IDE when multiple instances.
-- Harmonized the customization toolbar and context menu.
-- Added Edit Keyboard Shortcut for selected actions using the IDE's Keymap settings.
+- Changed: harmonized the customization toolbar and context menu.
+- Added: Edit Keyboard Shortcut for selected actions using the IDE's Keymap settings.
+- Added: optional Export/Import of menu actions' keyboard shortcuts (with conflict resolution).

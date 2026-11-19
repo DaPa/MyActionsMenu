@@ -49,7 +49,7 @@ A powerful, customizable toolbar dropdown menu plugin for IntelliJ-based IDEs. *
 
 ### 4. Configuration Export & Import (JSON)
 - **Portable Menu Profiles:** Export your customized menu layout—including custom labels, internal/external icons, separators, and menu title—to a clean, human-readable JSON file.
-- **Optional Shortcut Backup:** Include the active keymap's keyboard shortcuts in exports. Shortcut restoration is not yet supported; importing a profile does not change the IDE keymap.
+- **Optional Shortcut Transfer:** Include keyboard shortcuts in exports and choose whether to restore them on import. Review conflicts before changing key bindings, which affect the IDE beyond this menu.
 - **Flexible Import Modes:** Import configurations with the option to either **Replace** existing items or **Append** to them.
 - **Seamless Synchronization:** Easily share standardized team workflows or backup and sync settings across workstations.
 
