@@ -37,7 +37,6 @@ import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Dimension
 import java.awt.event.ActionEvent
-import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
 import javax.swing.AbstractAction
 import javax.swing.Action
@@ -159,31 +158,6 @@ class MyActionsCustomizationDialog(private val project: Project?) : DialogWrappe
             }
         }
 
-        itemList.addKeyListener(object : KeyAdapter() {
-            override fun keyPressed(e: KeyEvent) {
-                if (e.keyCode == KeyEvent.VK_F4) {
-                    val index = itemList.selectedIndex
-                    if (index in 0 until listModel.size()) {
-                        val item = listModel.get(index)
-                        if (!item.isSeparator) {
-                            editIcon(item, index)
-                            e.consume()
-                        }
-                    }
-                }
-                if (e.keyCode == KeyEvent.VK_F2) {
-                    val index = itemList.selectedIndex
-                    if (index in 0 until listModel.size()) {
-                        val item = listModel.get(index)
-                        if (!item.isSeparator) {
-                            editLabel(item, index)
-                            e.consume()
-                        }
-                    }
-                }
-            }
-        })
-
         setupContextMenu()
 
         val decorator = ToolbarDecorator.createDecorator(itemList)
@@ -191,9 +165,29 @@ class MyActionsCustomizationDialog(private val project: Project?) : DialogWrappe
                 showAddActionDialog()
             }
             .setAddActionName("Add Action")
+            .addExtraAction(object : DumbAwareAction("Edit Label", "Edit action label", AllIcons.Actions.Edit) {
+                init {
+                    registerCustomShortcutSet(CustomShortcutSet(KeyStroke.getKeyStroke(KeyEvent.VK_F2, 0)), itemList)
+                }
+
+                override fun actionPerformed(e: AnActionEvent) {
+                    val index = itemList.selectedIndex
+                    if (index in 0 until listModel.size()) {
+                        val item = listModel.get(index)
+                        if (!item.isSeparator) editLabel(item, index)
+                    }
+                }
+
+                override fun update(e: AnActionEvent) {
+                    val index = itemList.selectedIndex
+                    e.presentation.isEnabled = index in 0 until listModel.size() && !listModel.get(index).isSeparator
+                }
+
+                override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+            })
             .addExtraAction(object : DumbAwareAction("Edit Icon", "Edit action icon", AllIcons.Actions.Edit) {
                 init {
-                    shortcutSet = CustomShortcutSet(KeyStroke.getKeyStroke(KeyEvent.VK_F4, 0))
+                    registerCustomShortcutSet(CustomShortcutSet(KeyStroke.getKeyStroke(KeyEvent.VK_F4, 0)), itemList)
                 }
                 override fun actionPerformed(e: AnActionEvent) {
                     val index = itemList.selectedIndex
@@ -215,27 +209,11 @@ class MyActionsCustomizationDialog(private val project: Project?) : DialogWrappe
                     return ActionUpdateThread.EDT
                 }
             })
-            .addExtraAction(object : DumbAwareAction("Edit Label", "Edit action label", AllIcons.Actions.Edit) {
-                init {
-                    shortcutSet = CustomShortcutSet(KeyStroke.getKeyStroke(KeyEvent.VK_F2, 0))
-                }
-
-                override fun actionPerformed(e: AnActionEvent) {
-                    val index = itemList.selectedIndex
-                    if (index in 0 until listModel.size()) {
-                        val item = listModel.get(index)
-                        if (!item.isSeparator) editLabel(item, index)
-                    }
-                }
-
-                override fun update(e: AnActionEvent) {
-                    val index = itemList.selectedIndex
-                    e.presentation.isEnabled = index in 0 until listModel.size() && !listModel.get(index).isSeparator
-                }
-
-                override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
-            })
             .addExtraAction(object : DumbAwareAction("Edit Shortcut", "Edit action shortcuts in Keymap settings", AllIcons.Actions.Edit) {
+                init {
+                    registerCustomShortcutSet(CustomShortcutSet(KeyStroke.getKeyStroke(KeyEvent.VK_F6, 0)), itemList)
+                }
+
                 override fun actionPerformed(e: AnActionEvent) {
                     val item = itemList.selectedValue ?: return
                     if (canEditShortcut(item)) editShortcut(item)
@@ -381,6 +359,14 @@ class MyActionsCustomizationDialog(private val project: Project?) : DialogWrappe
                     val popup = JPopupMenu()
 
                     if (!item.isSeparator) {
+                        val editLabelItem = JMenuItem("Edit Label...").apply {
+                            accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_F2, 0)
+                            addActionListener {
+                                editLabel(item, index)
+                            }
+                        }
+                        popup.add(editLabelItem)
+
                         val editIconItem = JMenuItem("Edit Icon...").apply {
                             accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_F4, 0)
                             addActionListener {
@@ -389,14 +375,8 @@ class MyActionsCustomizationDialog(private val project: Project?) : DialogWrappe
                         }
                         popup.add(editIconItem)
 
-                        val editLabelItem = JMenuItem("Edit Label...").apply {
-                            accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_F2, 0)
-                            addActionListener {
-                                editLabel(item, index)
-                            }
-                        }
-                        popup.add(editLabelItem)
                         val editShortcutItem = JMenuItem("Edit Shortcut...").apply {
+                            accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_F6, 0)
                             isEnabled = canEditShortcut(item)
                             addActionListener { editShortcut(item) }
                         }
